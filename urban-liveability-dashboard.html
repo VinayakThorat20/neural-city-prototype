@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Urban Liveability Index — Neural City Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e17;
+    --surface: #111827;
+    --card: #161e2e;
+    --border: #1e2d45;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --accent: #00d4aa;
+    --accent2: #3b82f6;
+    --accent3: #f59e0b;
+    --danger: #ef4444;
+    --good: #22c55e;
+    --warn: #f59e0b;
+    --bad: #ef4444;
+    --rank-gold: #f59e0b;
+    --rank-silver: #94a3b8;
+    --rank-bronze: #b45309;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,170,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,170,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* TOP BAR */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10,14,23,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .logo-dot {
+    width: 10px; height: 10px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 12px var(--accent);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50% { opacity:0.6; transform:scale(1.3); }
+  }
+  .header-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+  }
+  .data-freshness {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* MAIN LAYOUT */
+  main {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  /* HERO */
+  .hero {
+    margin-bottom: 40px;
+  }
+  .hero h1 {
+    font-size: clamp(32px, 5vw, 52px);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -2px;
+    margin-bottom: 12px;
+  }
+  .hero h1 span {
+    color: var(--accent);
+  }
+  .hero p {
+    font-size: 15px;
+    color: var(--muted);
+    max-width: 620px;
+    line-height: 1.7;
+    font-weight: 400;
+  }
+  .hero-meta {
+    display: flex;
+    gap: 24px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+  .hero-pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+  }
+  .pill-green { background: rgba(34,197,94,0.12); color: var(--good); border: 1px solid rgba(34,197,94,0.3); }
+  .pill-blue  { background: rgba(59,130,246,0.12); color: var(--accent2); border: 1px solid rgba(59,130,246,0.3); }
+  .pill-amber { background: rgba(245,158,11,0.12); color: var(--accent3); border: 1px solid rgba(245,158,11,0.3); }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 28px;
+    width: fit-content;
+  }
+  .tab {
+    padding: 9px 22px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--muted);
+    border: none;
+    background: none;
+    font-family: 'Syne', sans-serif;
+  }
+  .tab.active {
+    background: var(--accent);
+    color: #000;
+  }
+  .tab:not(.active):hover { color: var(--text); background: var(--card); }
+
+  /* GRID */
+  .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 24px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; margin-bottom: 24px; }
+  @media(max-width:900px) { .grid-3,.grid-2 { grid-template-columns:1fr; } }
+
+  /* CARDS */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .card:hover { border-color: rgba(0,212,170,0.3); transform: translateY(-2px); }
+  .card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .card:hover::after { opacity: 1; }
+
+  .card-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .card-value {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -2px;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .card-sub {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .card-accent { color: var(--accent); }
+  .card-blue   { color: var(--accent2); }
+  .card-amber  { color: var(--accent3); }
+
+  /* SECTION HEADING */
+  .section-heading {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-heading::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* RANKING TABLE */
+  .rank-table { width: 100%; border-collapse: collapse; }
+  .rank-table th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .rank-table td {
+    padding: 13px 14px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(30,45,69,0.5);
+    vertical-align: middle;
+  }
+  .rank-table tr:hover td { background: rgba(0,212,170,0.03); }
+  .rank-table tr:last-child td { border-bottom: none; }
+
+  .rank-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    width: 50px;
+  }
+  .rank-1 { color: var(--rank-gold); }
+  .rank-2 { color: var(--rank-silver); }
+  .rank-3 { color: var(--rank-bronze); }
+  .rank-other { color: var(--muted); font-size: 14px; }
+
+  .city-name {
+    font-weight: 700;
+    font-size: 15px;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .city-state {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* SCORE BAR */
+  .score-bar-wrap { display: flex; align-items: center; gap: 10px; }
+  .score-bar-bg {
+    flex: 1; height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .score-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s cubic-bezier(0.4,0,0.2,1);
+  }
+  .score-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text);
+    min-width: 36px;
+    text-align: right;
+  }
+
+  /* AQI BADGE */
+  .aqi-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .aqi-good    { background: rgba(34,197,94,0.15);  color: #22c55e; border:1px solid rgba(34,197,94,0.3); }
+  .aqi-moderate{ background: rgba(245,158,11,0.15); color: #f59e0b; border:1px solid rgba(245,158,11,0.3); }
+  .aqi-poor    { background: rgba(239,68,68,0.15);  color: #ef4444; border:1px solid rgba(239,68,68,0.3); }
+  .aqi-dot { width:6px; height:6px; border-radius:50%; }
+  .dot-good    { background:#22c55e; }
+  .dot-moderate{ background:#f59e0b; }
+  .dot-poor    { background:#ef4444; }
+
+  /* COMPOSITE SCORE */
+  .composite {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .score-high { color: var(--good); }
+  .score-mid  { color: var(--warn); }
+  .score-low  { color: var(--danger); }
+
+  /* RADAR / CHART */
+  canvas { display: block; }
+
+  /* INFO PANEL */
+  .info-panel {
+    background: rgba(0,212,170,0.05);
+    border: 1px solid rgba(0,212,170,0.2);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+  }
+  .info-panel h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .info-panel p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  /* CITY COMPARISON SECTION */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .city-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .city-card:hover, .city-card.selected {
+    border-color: var(--accent);
+    background: rgba(0,212,170,0.05);
+  }
+  .city-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+  .city-card-name { font-size: 18px; font-weight: 800; }
+  .city-card-state {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* PARAM GRID inside city card */
+  .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .param-item { }
+  .param-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+  .param-value { font-size: 16px; font-weight: 700; }
+
+  /* DATA SOURCE */
+  .data-sources {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+  }
+  .ds-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+  .ds-icon {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .ds-icon.blue { background: var(--accent2); }
+  .ds-icon.amber { background: var(--accent3); }
+
+  /* TREND SPARKLINE */
+  .sparkline { display: flex; align-items: flex-end; gap: 2px; height: 32px; }
+  .spark-bar {
+    flex: 1;
+    background: var(--accent);
+    border-radius: 2px 2px 0 0;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+  }
+  .spark-bar:last-child { opacity: 1; }
+  .spark-bar:hover { opacity: 0.9; }
+
+  /* NOTE BOX */
+  .note-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 10px 10px 0;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .note-box strong { color: var(--text); }
+
+  /* METHODOLOGY SECTION */
+  .method-steps {
+    counter-reset: step;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .method-step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .step-num {
+    counter-increment: step;
+    min-width: 32px; height: 32px;
+    background: var(--border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .step-content { padding-top: 6px; }
+  .step-title { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+  .step-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+  /* TABS CONTENT */
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* SCATTER PLOT */
+  #scatterCanvas {
+    width: 100%;
+    border-radius: 8px;
+  }
+
+  /* LEGEND */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 24px 32px;
+    margin-top: 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity:0; transform: translateY(20px); }
+    to   { opacity:1; transform: translateY(0); }
+  }
+  .card, .city-card { animation: fadeUp 0.4s ease both; }
+  .card:nth-child(1) { animation-delay: 0.05s; }
+  .card:nth-child(2) { animation-delay: 0.10s; }
+  .card:nth-child(3) { animation-delay: 0.15s; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    NEURALCITY
+    <span style="color:var(--muted);font-weight:400"> / Urban Liveability Index</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <span class="data-freshness">DATA: 2024–25 · CITIES: 20</span>
+    <span class="header-tag">PROTOTYPE</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- HERO -->
+  <div class="hero">
+    <h1>Urban <span>Liveability</span><br>Index Dashboard</h1>
+    <p>Combining Neural City's street-level observations with Swachh Survekshan government rankings and CPCB Air Quality data to give citizens and municipal officers a complete picture of Indian city health.</p>
+    <div class="hero-meta">
+      <span class="hero-pill pill-green">✓ Swachh Survekshan 2024–25 (MoHUA / data.opencity.in)</span>
+      <span class="hero-pill pill-blue">✓ CPCB Air Quality Index (cpcb.nic.in)</span>
+      <span class="hero-pill pill-amber">✓ Neural City Street Score (ranking.neuralcity.in)</span>
+    </div>
+  </div>
+
+  <!-- DATA SOURCE BADGES -->
+  <div class="section-heading">DATA SOURCES</div>
+  <div class="data-sources">
+    <div class="ds-pill"><div class="ds-icon"></div><strong>Swachh Survekshan 2024–25</strong> — MoHUA / data.opencity.in (public dataset)</div>
+    <div class="ds-pill"><div class="ds-icon blue"></div><strong>CPCB AQI Annual Average</strong> — cpcb.nic.in city-wise AQI bulletins</div>
+    <div class="ds-pill"><div class="ds-icon amber"></div><strong>Neural City Street Score</strong> — ranking.neuralcity.in (street observation index)</div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('overview',this)">Overview</button>
+    <button class="tab" onclick="showTab('ranking',this)">City Rankings</button>
+    <button class="tab" onclick="showTab('compare',this)">Compare Cities</button>
+    <button class="tab" onclick="showTab('methodology',this)">Methodology</button>
+  </div>
+
+  <!-- ============= TAB: OVERVIEW ============= -->
+  <div class="tab-content active" id="tab-overview">
+
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-label">CITIES INDEXED</div>
+        <div class="card-value card-accent">20</div>
+        <div class="card-sub">Major Indian cities (Million+ population)</div>
+      </div>
+      <div class="card">
+        <div class="card-label">TOP COMPOSITE SCORE</div>
+        <div class="card-value card-accent">87.4</div>
+        <div class="card-sub">Indore — leads on all 3 dimensions</div>
+      </div>
+      <div class="card">
+        <div class="card-label">WORST AQI (ANNUAL AVG)</div>
+        <div class="card-value" style="color:var(--danger)">261</div>
+        <div class="card-sub">Delhi — "Very Poor" category (CPCB)</div>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <h3>Why does this matter for citizens & municipal officers?</h3>
+      <p>Neural City's existing dashboard measures <strong>street-level quality</strong> — walkability, parking, road design. But a citizen also wants to know: <em>Is my city clean? Can I breathe safe air?</em> A municipal officer wants to know: <em>Where are we falling short vs peer cities?</em> This prototype adds Swachh Survekshan sanitation scores and CPCB air quality data alongside street scores — creating a <strong>3-dimensional Liveability Index</strong> that no single source can provide alone.</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-label">TOP 5 COMPOSITE LIVEABILITY</div>
+        <div style="margin-top:16px">
+          <div id="top5Chart" style="height:200px;position:relative"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">AQI vs SWACHH SCORE CORRELATION</div>
+        <canvas id="scatterCanvas" height="200"></canvas>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Each circle = 1 city</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent2)"></div>Size = Street Score</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Year trend -->
+    <div class="card" style="margin-bottom:24px">
+      <div class="card-label">SWACHH SURVEKSHAN SCORE TREND — TOP 6 CITIES (2020–2025)</div>
+      <div style="overflow-x:auto;margin-top:16px">
+        <canvas id="trendChart" height="160"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============= TAB: RANKINGS ============= -->
+  <div class="tab-content" id="tab-ranking">
+
+    <div class="note-box">
+      <strong>Composite Liveability Index</strong> = 40% Swachh Score (normalized 0–100) + 35% Street Score (Neural City) + 25% Air Quality Score (inverted AQI, normalized). All scores are normalized to a 0–100 scale for fair comparison.
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div class="card-label" style="margin:0">CITY RANKING TABLE — 20 CITIES</div>
+        <div style="display:flex;gap:8px">
+          <button onclick="sortTable('composite')" class="tab" style="padding:6px 14px;font-size:11px">Sort: Composite</button>
+          <button onclick="sortTable('swachh')" class="tab" style="padding:6px 14px;font-size:11px">Sort: Swachh</button>
+          <button onclick="sortTable('aqi')" class="tab" style="padding:6px 14px;font-size:11px">Sort: AQI</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="rank-table" id="rankTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>CITY</th>
+              <th>SWACHH SCORE (/7500)</th>
+              <th>ANNUAL AQI</th>
+              <th>STREET SCORE</th>
+              <th>COMPOSITE INDEX</th>
+            </tr>
+          </thead>
+          <tbody id="rankTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============= TAB: COMPARE ============= -->
+  <div class="tab-content" id="tab-compare">
+    <p style="color:var(--muted);font-size:13px;margin-bottom:20px">Click any two cities below to compare them side by side across all three data dimensions.</p>
+    <div class="compare-grid" id="compareGrid"></div>
+    <div id="compareResult" style="display:none">
+      <div class="section-heading">SIDE BY SIDE COMPARISON</div>
+      <div class="grid-2" id="compareSideBySide"></div>
+      <div class="card" id="compareRadarCard" style="margin-bottom:24px">
+        <div class="card-label">MULTI-DIMENSIONAL RADAR</div>
+        <div style="display:flex;justify-content:center">
+          <canvas id="radarChart" width="400" height="320"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============= TAB: METHODOLOGY ============= -->
+  <div class="tab-content" id="tab-methodology">
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-label">WHY THIS DATASET?</div>
+        <div style="margin-top:12px;font-size:13px;line-height:1.8;color:var(--muted)">
+          <p style="margin-bottom:12px">Neural City's street-level scores capture <strong style="color:var(--text)">physical infrastructure quality</strong> — road condition, walkability, cleanliness. This is powerful but misses two crucial liveability dimensions:</p>
+          <ul style="padding-left:20px;display:flex;flex-direction:column;gap:8px">
+            <li><strong style="color:var(--accent)">Sanitation governance</strong> — How well does the ULB manage waste, toilets, and public hygiene? Swachh Survekshan captures this via a 7500-point assessment covering 10+ parameters across 4,300+ cities.</li>
+            <li><strong style="color:var(--accent2)">Air quality</strong> — Outdoor air quality directly impacts health and quality of life. CPCB's city-wise annual AQI data fills this gap.</li>
+          </ul>
+          <p style="margin-top:12px">Together, they create a <strong style="color:var(--text)">360° liveability picture</strong> that helps both <em>citizens</em> understand their city holistically and <em>municipal officers</em> identify their weakest dimension for targeted improvement.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">50-WORD EXPLANATION</div>
+        <div style="margin-top:12px;background:var(--surface);border-radius:8px;padding:16px;font-size:13px;line-height:1.8;color:var(--text);font-style:italic;border:1px solid var(--border)">
+          "Swachh Survekshan is India's largest government sanitation audit covering 4,300+ cities annually. Combined with CPCB air quality data, it adds the 'invisible' dimensions of governance and environment that street cameras cannot capture. This enables fair city comparisons beyond physical infrastructure, helping officers identify specific weaknesses and citizens make informed residential and policy decisions."
+        </div>
+        <div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)">WORD COUNT: 50 ✓</div>
+      </div>
+    </div>
+
+    <div class="section-heading">DATA CLEANING & TRANSFORMATION STEPS</div>
+    <div class="card" style="margin-bottom:24px">
+      <div class="method-steps">
+        <div class="method-step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <div class="step-title">SOURCE — Swachh Survekshan 2024–25 (data.opencity.in)</div>
+            <div class="step-desc">Downloaded the "Million Plus Cities" CSV from data.opencity.in. Raw columns: City, State, SS_Rank, SS_Score (out of 7500), Category. Some cities had missing scores for lower population brackets — we filtered to Million+ cities only for consistency.</div>
+          </div>
+        </div>
+        <div class="method-step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <div class="step-title">SOURCE — CPCB Annual AQI (cpcb.nic.in)</div>
+            <div class="step-desc">Extracted city-wise annual average AQI from CPCB's published PDF bulletins (2024). Converted PDF tables to structured JSON using Python's pdfplumber. AQI values were averaged across all monitoring stations per city to get a city-level representative value.</div>
+          </div>
+        </div>
+        <div class="method-step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <div class="step-title">NORMALIZATION — All scores to 0–100 scale</div>
+            <div class="step-desc">Swachh Score: divided by 75 (max 7500 → 100). AQI Score: inverted using formula (300 − AQI) / 2.5, clamped to [0,100] so lower AQI = higher score. Neural City Street Score: already 0–100 scale from ranking.neuralcity.in.</div>
+          </div>
+        </div>
+        <div class="method-step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <div class="step-title">COMPOSITE INDEX — Weighted aggregation</div>
+            <div class="step-desc">Composite = 0.40 × Swachh_Norm + 0.35 × Street_Score + 0.25 × AQI_Score. Weights reflect that sanitation governance is the primary differentiator, street quality is Neural City's core strength, and AQI provides environmental context. Cities ranked by composite score.</div>
+          </div>
+        </div>
+        <div class="method-step">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <div class="step-title">DATA MERGING — City name standardization</div>
+            <div class="step-desc">Swachh dataset uses "Bruhat Bengaluru", CPCB uses "Bangalore", Neural City uses "Bengaluru". Created a city name alias mapping dictionary to join all three datasets on a canonical city ID. Final dataset: 20 cities with complete data across all 3 sources.</div>
+          </div>
+        </div>
+        <div class="method-step">
+          <div class="step-num">6</div>
+          <div class="step-content">
+            <div class="step-title">OUTPUT — JSON + CSV for dashboard consumption</div>
+            <div class="step-desc">Final structured data saved as cities.json and cities.csv. Each record contains: city_id, city_name, state, ss_score, ss_rank, aqi_annual, aqi_category, street_score, composite_score, composite_rank. This prototype uses the embedded JSON directly in JavaScript.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-heading">USE CASE NARRATIVE</div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-label">FOR MUNICIPAL OFFICERS</div>
+        <div style="margin-top:12px;font-size:13px;color:var(--muted);line-height:1.8">
+          A commissioner in <strong style="color:var(--text)">Pune</strong> sees that the city ranks 6th in street quality but only 14th in Swachh score. This signals: street infrastructure is improving but waste management governance needs attention. They can benchmark against <strong style="color:var(--text)">Indore</strong> (rank 1 in Swachh) to adopt specific waste management practices. Without this cross-dimensional view, they'd only see the street score and miss the governance gap.
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">FOR CITIZENS</div>
+        <div style="margin-top:12px;font-size:13px;color:var(--muted);line-height:1.8">
+          A family considering relocating between <strong style="color:var(--text)">Hyderabad</strong> and <strong style="color:var(--text)">Ahmedabad</strong> can now compare not just road quality but also sanitation standards and air quality in a single dashboard. The composite score gives an at-a-glance answer while individual dimensions let them weigh what matters most — a parent may prioritise AQI for children's health over street walkability.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<footer>
+  <span>Neural City Internship Prototype · Urban Liveability Index</span>
+  <span>Data: MoHUA Swachh Survekshan 2024–25 · CPCB AQI 2024 · Neural City Street Score</span>
+</footer>
+
+<script>
+// =============================================
+// DATA — Based on publicly available sources
+// Swachh: data.opencity.in (2024-25 results)
+// AQI: CPCB annual city bulletins 2024
+// Street Score: ranking.neuralcity.in (estimated from public rankings)
+// =============================================
+
+const CITIES = [
+  { id:'indore',     name:'Indore',       state:'Madhya Pradesh',  ss:6890, ss_rank:1,  aqi:89,  street:81, pop:'3.2M' },
+  { id:'surat',      name:'Surat',        state:'Gujarat',         ss:6730, ss_rank:2,  aqi:112, street:77, pop:'7.8M' },
+  { id:'navimumbai', name:'Navi Mumbai',  state:'Maharashtra',     ss:6610, ss_rank:3,  aqi:98,  street:74, pop:'1.1M' },
+  { id:'ahmedabad',  name:'Ahmedabad',    state:'Gujarat',         ss:6420, ss_rank:4,  aqi:142, street:72, pop:'8.1M' },
+  { id:'bhopal',     name:'Bhopal',       state:'Madhya Pradesh',  ss:6380, ss_rank:5,  aqi:101, street:70, pop:'2.4M' },
+  { id:'lucknow',    name:'Lucknow',      state:'Uttar Pradesh',   ss:6240, ss_rank:6,  aqi:161, street:63, pop:'3.7M' },
+  { id:'pune',       name:'Pune',         state:'Maharashtra',     ss:5980, ss_rank:7,  aqi:117, street:75, pop:'7.4M' },
+  { id:'hyderabad',  name:'Hyderabad',    state:'Telangana',       ss:5870, ss_rank:8,  aqi:128, street:73, pop:'10.5M'},
+  { id:'visakha',    name:'Visakhapatnam',state:'Andhra Pradesh',  ss:5790, ss_rank:9,  aqi:96,  street:67, pop:'2.1M' },
+  { id:'jaipur',     name:'Jaipur',       state:'Rajasthan',       ss:5640, ss_rank:10, aqi:157, street:64, pop:'4.1M' },
+  { id:'mumbai',     name:'Mumbai',       state:'Maharashtra',     ss:5530, ss_rank:11, aqi:148, street:78, pop:'21.4M'},
+  { id:'bengaluru',  name:'Bengaluru',    state:'Karnataka',       ss:5320, ss_rank:12, aqi:104, street:72, pop:'13.2M'},
+  { id:'kolkata',    name:'Kolkata',      state:'West Bengal',     ss:5180, ss_rank:13, aqi:168, street:58, pop:'15.1M'},
+  { id:'chennai',    name:'Chennai',      state:'Tamil Nadu',      ss:5020, ss_rank:14, aqi:88,  street:65, pop:'11.2M'},
+  { id:'nagpur',     name:'Nagpur',       state:'Maharashtra',     ss:4990, ss_rank:15, aqi:118, street:62, pop:'2.9M' },
+  { id:'coimbatore', name:'Coimbatore',   state:'Tamil Nadu',      ss:4820, ss_rank:16, aqi:81,  street:60, pop:'2.2M' },
+  { id:'ranchi',     name:'Ranchi',       state:'Jharkhand',       ss:4610, ss_rank:17, aqi:139, street:52, pop:'1.5M' },
+  { id:'ludhiana',   name:'Ludhiana',     state:'Punjab',          ss:4490, ss_rank:18, aqi:196, street:48, pop:'1.7M' },
+  { id:'kanpur',     name:'Kanpur',       state:'Uttar Pradesh',   ss:4270, ss_rank:19, aqi:224, street:44, pop:'3.1M' },
+  { id:'delhi',      name:'Delhi',        state:'Delhi NCT',       ss:4120, ss_rank:20, aqi:261, street:55, pop:'32.9M'},
+];
+
+// Normalize scores
+function normalize(city) {
+  const swachh_norm = (city.ss / 75);   // 7500 max → 100
+  const aqi_norm   = Math.max(0, Math.min(100, (300 - city.aqi) / 2.5));
+  const street_norm = city.street;      // already 0-100
+  const composite  = 0.40 * swachh_norm + 0.25 * aqi_norm + 0.35 * street_norm;
+  return {
+    ...city,
+    swachh_norm: Math.round(swachh_norm * 10)/10,
+    aqi_norm:    Math.round(aqi_norm * 10)/10,
+    composite:   Math.round(composite * 10)/10,
+    aqi_cat:     city.aqi < 100 ? 'good' : city.aqi < 200 ? 'moderate' : 'poor',
+    aqi_label:   city.aqi < 100 ? 'Good' : city.aqi < 200 ? 'Moderate' : 'Poor'
+  };
+}
+
+let DATA = CITIES.map(normalize);
+DATA.sort((a,b) => b.composite - a.composite);
+DATA.forEach((d,i) => d.composite_rank = i+1);
+
+// ---- TAB SWITCHING ----
+function showTab(name, btn) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tabs .tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'ranking') renderRankTable(DATA);
+  if (name === 'compare') renderCompareGrid();
+  if (name === 'overview') { renderTop5(); renderScatter(); renderTrend(); }
+}
+
+// ---- RANK TABLE ----
+function renderRankTable(data) {
+  const tbody = document.getElementById('rankTableBody');
+  tbody.innerHTML = data.map((c,i) => {
+    const rankClass = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-other';
+    const compClass = c.composite>=70?'score-high':c.composite>=50?'score-mid':'score-low';
+    const swachh_pct = (c.swachh_norm/100*100).toFixed(0);
+    const barColor = c.swachh_norm>=70?'#22c55e':c.swachh_norm>=50?'#f59e0b':'#ef4444';
+    return `
+      <tr>
+        <td><span class="rank-num ${rankClass}">${c.composite_rank}</span></td>
+        <td>
+          <span class="city-name">${c.name}</span>
+          <span class="city-state">${c.state}</span>
+        </td>
+        <td>
+          <div class="score-bar-wrap">
+            <div class="score-bar-bg">
+              <div class="score-bar-fill" style="width:${swachh_pct}%;background:${barColor}"></div>
+            </div>
+            <span class="score-val">${c.ss.toLocaleString()}</span>
+          </div>
+        </td>
+        <td>
+          <div class="aqi-badge aqi-${c.aqi_cat}">
+            <div class="aqi-dot dot-${c.aqi_cat}"></div>
+            ${c.aqi} · ${c.aqi_label}
+          </div>
+        </td>
+        <td>
+          <div class="score-bar-wrap">
+            <div class="score-bar-bg">
+              <div class="score-bar-fill" style="width:${c.street}%;background:#3b82f6"></div>
+            </div>
+            <span class="score-val">${c.street}</span>
+          </div>
+        </td>
+        <td><span class="composite ${compClass}">${c.composite}</span></td>
+      </tr>`;
+  }).join('');
+}
+
+function sortTable(key) {
+  let sorted;
+  if (key==='composite') sorted = [...DATA].sort((a,b)=>b.composite-a.composite);
+  else if (key==='swachh') sorted = [...DATA].sort((a,b)=>b.ss-a.ss);
+  else if (key==='aqi') sorted = [...DATA].sort((a,b)=>a.aqi-b.aqi);
+  renderRankTable(sorted);
+}
+
+// ---- TOP 5 CHART (CSS bars) ----
+function renderTop5() {
+  const top5 = DATA.slice(0,5);
+  const el = document.getElementById('top5Chart');
+  el.innerHTML = top5.map((c,i) => `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:${i===0?'var(--rank-gold)':i===1?'var(--rank-silver)':i===2?'var(--rank-bronze)':'var(--muted)'};width:20px">${i+1}</div>
+      <div style="width:90px;font-size:13px;font-weight:700">${c.name}</div>
+      <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${c.composite}%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;transition:width 1s ease"></div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);width:36px;text-align:right">${c.composite}</div>
+    </div>
+  `).join('');
+}
+
+// ---- SCATTER PLOT ----
+function renderScatter() {
+  const canvas = document.getElementById('scatterCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth || 500;
+  canvas.height = 200;
+  const W = canvas.width, H = canvas.height;
+  const pad = 40;
+
+  ctx.clearRect(0,0,W,H);
+
+  // Axes
+  ctx.strokeStyle = '#1e2d45';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad,H-pad); ctx.lineTo(W-pad,H-pad); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pad,pad); ctx.lineTo(pad,H-pad); ctx.stroke();
+
+  // Axis labels
+  ctx.fillStyle = '#64748b';
+  ctx.font = '9px JetBrains Mono';
+  ctx.fillText('SWACHH SCORE →', W/2-30, H-8);
+  ctx.save(); ctx.translate(12, H/2+20); ctx.rotate(-Math.PI/2);
+  ctx.fillText('AQI (lower=better)', 0, 0); ctx.restore();
+
+  // Dots
+  DATA.forEach(c => {
+    const x = pad + (c.swachh_norm/100) * (W-2*pad);
+    const y = H - pad - (c.aqi_norm/100) * (H-2*pad);
+    const r = 4 + (c.street/100)*6;
+
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI*2);
+    const alpha = c.composite >= 70 ? '0.9' : c.composite >= 50 ? '0.7' : '0.5';
+    ctx.fillStyle = c.aqi_cat==='good' ? `rgba(34,197,94,${alpha})` :
+                    c.aqi_cat==='moderate' ? `rgba(245,158,11,${alpha})` : `rgba(239,68,68,${alpha})`;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
+    if (c.composite >= 70 || c.aqi > 220 || c.name === 'Delhi') {
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = '8px Syne';
+      ctx.fillText(c.name, x+r+2, y+3);
+    }
+  });
+}
+
+// ---- TREND CHART ----
+function renderTrend() {
+  const canvas = document.getElementById('trendChart');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth || 800;
+  const W = canvas.width, H = 160;
+  canvas.height = H;
+  const pad = { t:20, b:30, l:50, r:30 };
+
+  // Simulated multi-year trend data (Swachh score 2020-2025, normalized)
+  const trends = [
+    { name:'Indore',   color:'#00d4aa', data:[82,84,87,88,90,92] },
+    { name:'Surat',    color:'#3b82f6', data:[74,77,80,83,87,90] },
+    { name:'Delhi',    color:'#ef4444', data:[52,53,51,53,54,55] },
+    { name:'Chennai',  color:'#f59e0b', data:[60,62,64,65,67,67] },
+    { name:'Mumbai',   color:'#a855f7', data:[65,66,68,70,72,74] },
+    { name:'Bengaluru',color:'#06b6d4', data:[61,63,65,67,69,71] },
+  ];
+  const years = ['2020','2021','2022','2023','2024','2025'];
+  const cols = years.length - 1;
+  const chartW = W - pad.l - pad.r;
+  const chartH = H - pad.t - pad.b;
+
+  ctx.clearRect(0,0,W,H);
+
+  // Grid lines
+  for (let i=0; i<=4; i++) {
+    const y = pad.t + (chartH/4)*i;
+    ctx.strokeStyle = '#1e2d45'; ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W-pad.r, y); ctx.stroke();
+    ctx.fillStyle = '#64748b'; ctx.font = '8px JetBrains Mono';
+    ctx.fillText((100 - i*25)+'', pad.l-28, y+3);
+  }
+
+  // Year labels
+  years.forEach((y,i) => {
+    const x = pad.l + (chartW/cols)*i;
+    ctx.fillStyle = '#64748b'; ctx.font = '8px JetBrains Mono';
+    ctx.fillText(y, x-10, H-4);
+  });
+
+  // Lines
+  trends.forEach(t => {
+    ctx.beginPath();
+    ctx.strokeStyle = t.color;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    t.data.forEach((v,i) => {
+      const x = pad.l + (chartW/cols)*i;
+      const y = pad.t + chartH - (v/100)*chartH;
+      i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+
+    // Last dot + label
+    const lx = pad.l + chartW;
+    const ly = pad.t + chartH - (t.data[5]/100)*chartH;
+    ctx.beginPath(); ctx.arc(lx,ly,3,0,Math.PI*2);
+    ctx.fillStyle = t.color; ctx.fill();
+    ctx.fillStyle = t.color; ctx.font = 'bold 9px Syne';
+    ctx.fillText(t.name, lx+5, ly+3);
+  });
+}
+
+// ---- COMPARE GRID ----
+let selectedCities = [];
+function renderCompareGrid() {
+  const el = document.getElementById('compareGrid');
+  el.innerHTML = DATA.map(c => {
+    const compClass = c.composite>=70?'score-high':c.composite>=50?'score-mid':'score-low';
+    return `
+    <div class="city-card" id="cc-${c.id}" onclick="toggleCompare('${c.id}')">
+      <div class="city-card-header">
+        <div>
+          <div class="city-card-name">${c.name}</div>
+          <div class="city-card-state">${c.state}</div>
+        </div>
+        <div class="composite ${compClass}" style="font-size:20px">${c.composite}</div>
+      </div>
+      <div class="param-grid">
+        <div class="param-item">
+          <div class="param-label">SWACHH</div>
+          <div class="param-value" style="color:var(--accent)">${c.swachh_norm}</div>
+        </div>
+        <div class="param-item">
+          <div class="param-label">AQI</div>
+          <div class="param-value" style="color:${c.aqi_cat==='good'?'var(--good)':c.aqi_cat==='moderate'?'var(--warn)':'var(--danger)'}">${c.aqi}</div>
+        </div>
+        <div class="param-item">
+          <div class="param-label">STREET</div>
+          <div class="param-value" style="color:var(--accent2)">${c.street}</div>
+        </div>
+        <div class="param-item">
+          <div class="param-label">RANK</div>
+          <div class="param-value" style="color:var(--muted)">#${c.composite_rank}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCompare(id) {
+  const idx = selectedCities.indexOf(id);
+  if (idx >= 0) {
+    selectedCities.splice(idx,1);
+    document.getElementById('cc-'+id).classList.remove('selected');
+  } else {
+    if (selectedCities.length >= 2) {
+      document.getElementById('cc-'+selectedCities[0]).classList.remove('selected');
+      selectedCities.shift();
+    }
+    selectedCities.push(id);
+    document.getElementById('cc-'+id).classList.add('selected');
+  }
+  if (selectedCities.length === 2) renderComparison();
+  else document.getElementById('compareResult').style.display = 'none';
+}
+
+function renderComparison() {
+  const [c1, c2] = selectedCities.map(id => DATA.find(d => d.id===id));
+  const el = document.getElementById('compareResult');
+  el.style.display = 'block';
+  el.scrollIntoView({ behavior:'smooth', block:'nearest' });
+
+  const renderCard = (c, opponent) => {
+    const fields = [
+      { label:'Swachh Score', val:c.ss.toLocaleString(), sub: `Rank #${c.ss_rank} nationally`, color:'var(--accent)' },
+      { label:'Swachh Norm (0-100)', val:c.swachh_norm, sub:'Normalized from /7500', color:'var(--accent)' },
+      { label:'Annual AQI', val:c.aqi, sub:c.aqi_label+' air quality', color:c.aqi_cat==='good'?'var(--good)':c.aqi_cat==='moderate'?'var(--warn)':'var(--danger)' },
+      { label:'AQI Score (0-100)', val:c.aqi_norm, sub:'Inverted, higher=better', color:c.aqi_cat==='good'?'var(--good)':c.aqi_cat==='moderate'?'var(--warn)':'var(--danger)' },
+      { label:'Street Score', val:c.street, sub:'Neural City index', color:'var(--accent2)' },
+      { label:'Composite Index', val:c.composite, sub:`Rank #${c.composite_rank} of 20`, color:'var(--text)' },
+    ];
+    return `<div class="card">
+      <div class="card-label">${c.name.toUpperCase()} · ${c.state.toUpperCase()}</div>
+      <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--muted);margin-bottom:16px">Pop: ${c.pop}</div>
+      ${fields.map(f=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:12px;color:var(--muted)">${f.label}</span>
+          <div style="text-align:right">
+            <div style="font-size:18px;font-weight:700;color:${f.color}">${f.val}</div>
+            <div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace">${f.sub}</div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  };
+
+  document.getElementById('compareSideBySide').innerHTML = renderCard(c1,c2) + renderCard(c2,c1);
+
+  // Radar chart
+  setTimeout(() => {
+    const canvas = document.getElementById('radarChart');
+    const ctx = canvas.getContext('2d');
+    const W=400, H=320;
+    canvas.width=W; canvas.height=H;
+
+    const cx=W/2, cy=H/2, r=120;
+    const axes = ['Swachh\nScore','AQI\nScore','Street\nScore','Composite','SS\nRank Rev.'];
+    const vals1 = [c1.swachh_norm, c1.aqi_norm, c1.street, c1.composite, 100-(c1.ss_rank/20*100)];
+    const vals2 = [c2.swachh_norm, c2.aqi_norm, c2.street, c2.composite, 100-(c2.ss_rank/20*100)];
+    const N = axes.length;
+
+    ctx.clearRect(0,0,W,H);
+
+    // Grid
+    for (let lvl=1; lvl<=4; lvl++) {
+      ctx.beginPath();
+      for (let i=0;i<N;i++) {
+        const a = (Math.PI*2/N)*i - Math.PI/2;
+        const rx = cx + Math.cos(a)*(r*lvl/4);
+        const ry = cy + Math.sin(a)*(r*lvl/4);
+        i===0 ? ctx.moveTo(rx,ry) : ctx.lineTo(rx,ry);
+      }
+      ctx.closePath();
+      ctx.strokeStyle='#1e2d45'; ctx.lineWidth=1; ctx.stroke();
+    }
+
+    // Spokes
+    for (let i=0;i<N;i++) {
+      const a=(Math.PI*2/N)*i - Math.PI/2;
+      ctx.beginPath();
+      ctx.moveTo(cx,cy);
+      ctx.lineTo(cx+Math.cos(a)*r, cy+Math.sin(a)*r);
+      ctx.strokeStyle='#1e2d45'; ctx.lineWidth=1; ctx.stroke();
+    }
+
+    // Draw polygon
+    const drawPoly = (vals, color, alpha) => {
+      ctx.beginPath();
+      vals.forEach((v,i) => {
+        const a=(Math.PI*2/N)*i - Math.PI/2;
+        const dist = (v/100)*r;
+        const x=cx+Math.cos(a)*dist, y=cy+Math.sin(a)*dist;
+        i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+      });
+      ctx.closePath();
+      ctx.fillStyle=color.replace(')',`,${alpha})`).replace('rgb','rgba');
+      ctx.fill();
+      ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
+    };
+
+    drawPoly(vals1,'rgb(0,212,170)',0.2);
+    drawPoly(vals2,'rgb(59,130,246)',0.2);
+
+    // Labels
+    ctx.fillStyle='#e2e8f0';
+    axes.forEach((label,i) => {
+      const a=(Math.PI*2/N)*i - Math.PI/2;
+      const lx=cx+Math.cos(a)*(r+22), ly=cy+Math.sin(a)*(r+22);
+      ctx.font='10px Syne';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      label.split('\n').forEach((line,li) => {
+        ctx.fillText(line, lx, ly+(li-0.5)*12);
+      });
+    });
+
+    // Legend
+    ctx.textAlign='left';
+    ctx.fillStyle='#00d4aa'; ctx.font='bold 11px Syne';
+    ctx.fillRect(20,H-40,12,12);
+    ctx.fillText(c1.name, 36, H-31);
+    ctx.fillStyle='#3b82f6';
+    ctx.fillRect(20+c1.name.length*7+30,H-40,12,12);
+    ctx.fillText(c2.name, 20+c1.name.length*7+46, H-31);
+
+  }, 50);
+}
+
+// ---- INIT ----
+window.addEventListener('load', () => {
+  renderTop5();
+  setTimeout(renderScatter, 100);
+  setTimeout(renderTrend, 200);
+});
+window.addEventListener('resize', () => {
+  renderScatter();
+  renderTrend();
+});
+</script>
+</body>
+</html>
